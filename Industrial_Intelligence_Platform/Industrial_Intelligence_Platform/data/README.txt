@@ -1,0 +1,1 @@
+Place original datasets here if desired. The unified app's Load Classification tab accepts a telemetry CSV upload. The Document Intelligence tab accepts contract files directly. Original assignment train/test datasets were not provided in the available files.

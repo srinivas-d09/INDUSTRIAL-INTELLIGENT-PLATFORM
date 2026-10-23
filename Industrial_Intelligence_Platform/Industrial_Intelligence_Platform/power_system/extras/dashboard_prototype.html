@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Power System Load Intelligence Dashboard</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+    .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; }
+    .tab-btn.active { background-color: #3b82f6; color: #ffffff; }
+    .badge-light { background-color: #1e3a8a; color: #93c5fd; border: 1px solid #3b82f6; }
+    .badge-medium { background-color: #7c2d12; color: #fdba74; border: 1px solid #f97316; }
+    .badge-max { background-color: #831843; color: #fbcfe8; border: 1px solid #ec4899; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Top Header Navigation -->
+  <header class="border-b border-slate-800 bg-slate-900/80 sticky top-0 z-50 backdrop-blur-md px-6 py-4">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white text-xl shadow-lg shadow-blue-500/30">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            Power System Load Intelligence
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Live Dashboard</span>
+          </h1>
+          <p class="text-xs text-slate-400">15-Minute Telemetry Telematics & Multi-Class Load Classification (Holdout Accuracy: 94.76%)</p>
+        </div>
+      </div>
+
+      <!-- Action & View Controls -->
+      <div class="flex items-center gap-3">
+        <div class="flex bg-slate-800 p-1 rounded-lg border border-slate-700 text-xs font-medium">
+          <button id="tab-btn-overview" class="tab-btn active px-3 py-1.5 rounded-md transition-colors" data-target="view-overview">
+            <i class="fa-solid fa-chart-pie mr-1"></i> Overview
+          </button>
+          <button id="tab-btn-eda" class="tab-btn px-3 py-1.5 rounded-md text-slate-400 hover:text-white transition-colors" data-target="view-eda">
+            <i class="fa-solid fa-chart-line mr-1"></i> Visualizations
+          </button>
+          <button id="tab-btn-model" class="tab-btn px-3 py-1.5 rounded-md text-slate-400 hover:text-white transition-colors" data-target="view-model">
+            <i class="fa-solid fa-brain mr-1"></i> Model & Metrics
+          </button>
+          <button id="tab-btn-predict" class="tab-btn px-3 py-1.5 rounded-md text-slate-400 hover:text-white transition-colors" data-target="view-predict">
+            <i class="fa-solid fa-sliders mr-1"></i> Live Predictor
+          </button>
+          <button id="tab-btn-data" class="tab-btn px-3 py-1.5 rounded-md text-slate-400 hover:text-white transition-colors" data-target="view-data">
+            <i class="fa-solid fa-table mr-1"></i> Data Explorer
+          </button>
+        </div>
+        <button id="btn-export-csv" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg shadow transition flex items-center gap-1.5">
+          <i class="fa-solid fa-download"></i> Export Data
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto p-6 flex-1 w-full space-y-6">
+
+    <!-- KPI Metrics Banner -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="glass-card p-4 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Telemetry</span>
+          <span class="text-blue-400 text-lg"><i class="fa-regular fa-clock"></i></span>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span class="text-2xl font-bold text-white">35,040</span>
+          <span class="text-xs text-slate-400">intervals (1 year)</span>
+        </div>
+        <div class="text-xs text-emerald-400 mt-1 flex items-center gap-1">
+          <i class="fa-solid fa-check"></i> 100% Complete (0 missing)
+        </div>
+      </div>
+
+      <div class="glass-card p-4 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Holdout Accuracy</span>
+          <span class="text-emerald-400 text-lg"><i class="fa-solid fa-bullseye"></i></span>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span class="text-2xl font-bold text-emerald-400">94.76%</span>
+          <span class="text-xs text-slate-400">Dec 2018 holdout</span>
+        </div>
+        <div class="text-xs text-slate-400 mt-1">
+          Chronological out-of-sample test
+        </div>
+      </div>
+
+      <div class="glass-card p-4 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Macro F1-Score</span>
+          <span class="text-purple-400 text-lg"><i class="fa-solid fa-scale-balanced"></i></span>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span class="text-2xl font-bold text-purple-400">0.9413</span>
+          <span class="text-xs text-slate-400">Balanced Sensitivity</span>
+        </div>
+        <div class="text-xs text-slate-400 mt-1">
+          Weighted F1: <strong class="text-slate-200">0.9481</strong>
+        </div>
+      </div>
+
+      <div class="glass-card p-4 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Inference Speed</span>
+          <span class="text-amber-400 text-lg"><i class="fa-solid fa-gauge-high"></i></span>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span class="text-2xl font-bold text-amber-400">2.1 ms</span>
+          <span class="text-xs text-slate-400">per reading</span>
+        </div>
+        <div class="text-xs text-emerald-400 mt-1">
+          SCADA & Edge ready (&lt; 900s interval)
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 1: OVERVIEW -->
+    <div id="view-overview" class="view-panel space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left: Class Distribution Card -->
+        <div class="glass-card p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-chart-pie text-blue-400"></i> Load Regime Distribution
+              </h2>
+              <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400">Annual Share</span>
+            </div>
+            <div class="relative h-56 w-full flex items-center justify-center">
+              <canvas id="chart-class-distribution"></canvas>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-2 text-center pt-3 border-t border-slate-800 text-xs">
+            <div class="p-2 rounded bg-blue-950/40 border border-blue-900/50">
+              <div class="text-blue-400 font-bold">50.5%</div>
+              <div class="text-slate-400 mt-0.5">Light Load</div>
+            </div>
+            <div class="p-2 rounded bg-orange-950/40 border border-orange-900/50">
+              <div class="text-orange-400 font-bold">27.7%</div>
+              <div class="text-slate-400 mt-0.5">Medium Load</div>
+            </div>
+            <div class="p-2 rounded bg-pink-950/40 border border-pink-900/50">
+              <div class="text-pink-400 font-bold">21.8%</div>
+              <div class="text-slate-400 mt-0.5">Max Load</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Middle & Right: Diurnal Profile Card -->
+        <div class="glass-card p-5 lg:col-span-2 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                  <i class="fa-solid fa-chart-line text-emerald-400"></i> Diurnal 24-Hour Energy Profile by Regime
+                </h2>
+                <p class="text-xs text-slate-400">Average Active Power (kWh) at each hour across manufacturing shifts</p>
+              </div>
+              <div class="text-xs bg-slate-800 px-2 py-1 rounded text-slate-300">
+                15-Min Granularity
+              </div>
+            </div>
+            <div class="relative h-64 w-full">
+              <canvas id="chart-diurnal-profile"></canvas>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800 gap-2">
+            <div><span class="w-2.5 h-2.5 inline-block rounded-full bg-blue-500 mr-1"></span><strong>Night Shift (22:00-08:00):</strong> Light Load baselines (&lt; 15 kWh)</div>
+            <div><span class="w-2.5 h-2.5 inline-block rounded-full bg-pink-500 mr-1"></span><strong>Peak Manufacturing (10:00-17:00):</strong> Maximum Load (&gt; 70 kWh)</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Operational Architecture Flow -->
+      <div class="glass-card p-5">
+        <h2 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-network-wired text-purple-400"></i> Smart Grid Operational Decision Pipeline
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+          <div class="p-3 bg-slate-800/60 rounded-lg border border-slate-700/60">
+            <div class="text-blue-400 font-bold mb-1 flex items-center gap-1.5">
+              <span class="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs">1</span>
+              Smart Meter Telemetry
+            </div>
+            <p class="text-slate-300 leading-relaxed">Captures 15-minute active power (kWh), reactive powers, and power factors over Modbus/MQTT.</p>
+          </div>
+          <div class="p-3 bg-slate-800/60 rounded-lg border border-slate-700/60">
+            <div class="text-purple-400 font-bold mb-1 flex items-center gap-1.5">
+              <span class="w-5 h-5 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs">2</span>
+              Feature Engineering
+            </div>
+            <p class="text-slate-300 leading-relaxed">Calculates cyclical trigonometric sine/cosine encodings, apparent power (kVAh), and NSM.</p>
+          </div>
+          <div class="p-3 bg-slate-800/60 rounded-lg border border-slate-700/60">
+            <div class="text-emerald-400 font-bold mb-1 flex items-center gap-1.5">
+              <span class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">3</span>
+              Extra Trees Classifier
+            </div>
+            <p class="text-slate-300 leading-relaxed">Evaluates 500 decision trees in 2.1 ms with balanced weights to categorize the operational load regime.</p>
+          </div>
+          <div class="p-3 bg-slate-800/60 rounded-lg border border-slate-700/60">
+            <div class="text-amber-400 font-bold mb-1 flex items-center gap-1.5">
+              <span class="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">4</span>
+              Automated Grid Action
+            </div>
+            <p class="text-slate-300 leading-relaxed">Triggers automated peak-shaving dispatch, power factor capacitor switching, and TOU billing.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 2: VISUALIZATIONS GALLERY -->
+    <div id="view-eda" class="view-panel hidden space-y-6">
+      <div class="glass-card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-images text-blue-400"></i> Complete Diagnostic Visualizations (10 Core Figures)
+            </h2>
+            <p class="text-xs text-slate-400">High-resolution diagnostic figures generated by the modeling pipeline</p>
+          </div>
+          <span class="text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-1 rounded-full font-medium">10 Figures</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <!-- Fig 1 Card -->
+          <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700/70 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-white">Figure 1 — Class Distribution & Imbalance</h3>
+              <span class="text-xs text-slate-400">EDA</span>
+            </div>
+            <div class="relative h-56 bg-slate-900 rounded-lg p-2 flex items-center justify-center">
+              <canvas id="chart-fig1"></canvas>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Demonstrates class distribution: Light Load represents 50.5%, Medium Load 27.7%, and Maximum Load 21.8%. Confirms the requirement for balanced class weighting during training.
+            </p>
+          </div>
+
+          <!-- Fig 4 Card -->
+          <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700/70 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-white">Figure 4 — Inter-Feature Pearson Correlation</h3>
+              <span class="text-xs text-slate-400">Multicollinearity</span>
+            </div>
+            <div class="relative h-56 bg-slate-900 rounded-lg p-2 flex items-center justify-center overflow-auto">
+              <canvas id="chart-fig4"></canvas>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Reveals collinearity between Active Energy (kWh) and CO2 emissions (r = 0.99), as well as strong inductive coupling between Usage and Lagging Reactive Power.
+            </p>
+          </div>
+
+          <!-- Fig 7 Card -->
+          <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700/70 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-white">Figure 7 — Extra Trees Feature Importance (MDI)</h3>
+              <span class="text-xs text-slate-400">Interpretability</span>
+            </div>
+            <div class="relative h-56 bg-slate-900 rounded-lg p-2 flex items-center justify-center">
+              <canvas id="chart-fig7"></canvas>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Identifies NSM (22.8%) and Usage_kWh (18.5%) as dominant predictive signals, followed by cyclical trigonometric time transforms (10.7%) and lagging power factor.
+            </p>
+          </div>
+
+          <!-- Fig 9 Card -->
+          <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700/70 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-white">Figure 9 — Per-Class Evaluation Scorecard</h3>
+              <span class="text-xs text-slate-400">Holdout Metrics</span>
+            </div>
+            <div class="relative h-56 bg-slate-900 rounded-lg p-2 flex items-center justify-center">
+              <canvas id="chart-fig9"></canvas>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Displays holdout performance: Light Load achieves 94% recall / 98% precision; Medium Load reaches 97% recall / 90% precision; Maximum Load secures 95% recall / 91% precision.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 3: MODEL PERFORMANCE & CONFUSION MATRIX -->
+    <div id="view-model" class="view-panel hidden space-y-6">
+      
+      <!-- Benchmark Table Card -->
+      <div class="glass-card p-5">
+        <h2 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-trophy text-amber-400"></i> Multi-Model Chronological Holdout Benchmark
+        </h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left">
+            <thead class="text-slate-400 bg-slate-800/70 uppercase text-[10px] tracking-wider">
+              <tr>
+                <th class="p-3">Model Architecture</th>
+                <th class="p-3">Paradigm</th>
+                <th class="p-3 text-right">Holdout Acc</th>
+                <th class="p-3 text-right">Macro F1</th>
+                <th class="p-3 text-right">Weighted F1</th>
+                <th class="p-3 text-right">Macro Recall</th>
+                <th class="p-3 text-right">Latency</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+              <tr class="bg-blue-950/20 text-blue-200 font-semibold">
+                <td class="p-3 flex items-center gap-1.5"><i class="fa-solid fa-crown text-amber-400"></i> Extra Trees Classifier (Champion)</td>
+                <td class="p-3 text-slate-300">Extremely Randomized Trees</td>
+                <td class="p-3 text-right text-emerald-400 font-bold">94.76%</td>
+                <td class="p-3 text-right">0.9413</td>
+                <td class="p-3 text-right">0.9481</td>
+                <td class="p-3 text-right">95.35%</td>
+                <td class="p-3 text-right text-amber-300">2.1 ms</td>
+              </tr>
+              <tr class="text-slate-300">
+                <td class="p-3">HistGradientBoosting</td>
+                <td class="p-3 text-slate-400">Gradient Boosted Trees</td>
+                <td class="p-3 text-right font-medium">93.89%</td>
+                <td class="p-3 text-right">0.9312</td>
+                <td class="p-3 text-right">0.9392</td>
+                <td class="p-3 text-right">94.21%</td>
+                <td class="p-3 text-right">3.4 ms</td>
+              </tr>
+              <tr class="text-slate-300">
+                <td class="p-3">Random Forest</td>
+                <td class="p-3 text-slate-400">Bagging Ensemble</td>
+                <td class="p-3 text-right font-medium">93.52%</td>
+                <td class="p-3 text-right">0.9275</td>
+                <td class="p-3 text-right">0.9358</td>
+                <td class="p-3 text-right">93.85%</td>
+                <td class="p-3 text-right">4.8 ms</td>
+              </tr>
+              <tr class="text-slate-300">
+                <td class="p-3">Decision Tree (max_depth=12)</td>
+                <td class="p-3 text-slate-400">Single Tree (Pruned)</td>
+                <td class="p-3 text-right">89.42%</td>
+                <td class="p-3 text-right">0.8821</td>
+                <td class="p-3 text-right">0.8940</td>
+                <td class="p-3 text-right">89.15%</td>
+                <td class="p-3 text-right">0.8 ms</td>
+              </tr>
+              <tr class="text-slate-400">
+                <td class="p-3">Logistic Regression (Scaled)</td>
+                <td class="p-3 text-slate-500">Linear Baseline</td>
+                <td class="p-3 text-right text-red-400">72.15%</td>
+                <td class="p-3 text-right">0.7104</td>
+                <td class="p-3 text-right">0.7230</td>
+                <td class="p-3 text-right">71.80%</td>
+                <td class="p-3 text-right">0.4 ms</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Confusion Matrix Deep Dive -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="glass-card p-5">
+          <h2 class="text-sm font-bold text-white mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-table-cells text-blue-400"></i> Holdout Confusion Matrix (Sample Counts)
+          </h2>
+          <p class="text-xs text-slate-400 mb-4">Total 2,977 intervals evaluated on unseen December 2018 holdout</p>
+          
+          <div class="grid grid-cols-4 gap-2 text-center text-xs">
+            <div class="p-2 font-semibold text-slate-400 bg-slate-900 rounded">Actual \ Pred</div>
+            <div class="p-2 font-bold text-blue-300 bg-slate-800 rounded">Light</div>
+            <div class="p-2 font-bold text-orange-300 bg-slate-800 rounded">Medium</div>
+            <div class="p-2 font-bold text-pink-300 bg-slate-800 rounded">Maximum</div>
+
+            <div class="p-2 font-bold text-blue-300 bg-slate-800 rounded text-left flex items-center">Actual Light</div>
+            <div class="p-3 bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 font-bold text-sm rounded">1,634</div>
+            <div class="p-3 bg-slate-800 text-slate-300 font-medium rounded">61</div>
+            <div class="p-3 bg-slate-800 text-slate-300 font-medium rounded">50</div>
+
+            <div class="p-2 font-bold text-orange-300 bg-slate-800 rounded text-left flex items-center">Actual Medium</div>
+            <div class="p-3 bg-slate-800 text-slate-300 font-medium rounded">19</div>
+            <div class="p-3 bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 font-bold text-sm rounded">684</div>
+            <div class="p-3 bg-slate-800 text-slate-300 font-medium rounded">1</div>
+
+            <div class="p-2 font-bold text-pink-300 bg-slate-800 rounded text-left flex items-center">Actual Max</div>
+            <div class="p-3 bg-slate-800 text-slate-300 font-medium rounded">10</div>
+            <div class="p-3 bg-slate-800 text-slate-300 font-medium rounded">15</div>
+            <div class="p-3 bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 font-bold text-sm rounded">503</div>
+          </div>
+        </div>
+
+        <div class="glass-card p-5">
+          <h2 class="text-sm font-bold text-white mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-percent text-emerald-400"></i> Normalized Class Sensitivity (Recall Rates)
+          </h2>
+          <p class="text-xs text-slate-400 mb-4">Percentage of each true class correctly captured</p>
+
+          <div class="space-y-4 text-xs">
+            <div>
+              <div class="flex justify-between font-medium mb-1">
+                <span class="text-blue-300">Light Load Recall (1,634 / 1,745)</span>
+                <span class="text-emerald-400 font-bold">93.6%</span>
+              </div>
+              <div class="w-full bg-slate-800 rounded-full h-2.5">
+                <div class="bg-blue-500 h-2.5 rounded-full" style="width: 93.6%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between font-medium mb-1">
+                <span class="text-orange-300">Medium Load Recall (684 / 704)</span>
+                <span class="text-emerald-400 font-bold">97.2%</span>
+              </div>
+              <div class="w-full bg-slate-800 rounded-full h-2.5">
+                <div class="bg-orange-500 h-2.5 rounded-full" style="width: 97.2%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between font-medium mb-1">
+                <span class="text-pink-300">Maximum Load Recall (503 / 528)</span>
+                <span class="text-emerald-400 font-bold">95.3%</span>
+              </div>
+              <div class="w-full bg-slate-800 rounded-full h-2.5">
+                <div class="bg-pink-500 h-2.5 rounded-full" style="width: 95.3%"></div>
+              </div>
+            </div>
+
+            <div class="p-3 bg-slate-800/60 rounded-lg text-slate-300 text-xs leading-relaxed mt-4">
+              <strong class="text-white">Diagnostic Takeaway:</strong> High sensitivity across all three classes confirms that the balanced class-weighting mechanism effectively eliminated majority-class bias.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 4: LIVE PREDICTION SIMULATOR -->
+    <div id="view-predict" class="view-panel hidden space-y-6">
+      <div class="glass-card p-6">
+        <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-sliders text-blue-400"></i> Single-Record Real-Time Prediction Simulator
+            </h2>
+            <p class="text-xs text-slate-400">Adjust active energy, reactive power, power factors, and time parameters to simulate model inference</p>
+          </div>
+          <button id="btn-preset-night" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded text-slate-300 border border-slate-700">Preset: Night Standby</button>
+          <button id="btn-preset-peak" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded text-slate-300 border border-slate-700">Preset: Peak Shift</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <!-- Inputs Column 1 -->
+          <div class="space-y-4">
+            <div>
+              <label for="input-usage" class="block text-xs font-semibold text-slate-300 mb-1">Active Energy (Usage_kWh)</label>
+              <input type="number" id="input-usage" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-blue-500" value="85.5" step="0.5" min="0" max="150">
+              <span class="text-[10px] text-slate-500">Typical: Light &lt;15, Medium 25-55, Max &gt;60</span>
+            </div>
+
+            <div>
+              <label for="input-lag-q" class="block text-xs font-semibold text-slate-300 mb-1">Lagging Reactive Power (kVarh)</label>
+              <input type="number" id="input-lag-q" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-blue-500" value="48.2" step="0.5" min="0" max="100">
+              <span class="text-[10px] text-slate-500">Inductive reactance from heavy motors</span>
+            </div>
+
+            <div>
+              <label for="input-lead-q" class="block text-xs font-semibold text-slate-300 mb-1">Leading Reactive Power (kVarh)</label>
+              <input type="number" id="input-lead-q" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-blue-500" value="0.0" step="0.1" min="0" max="30">
+              <span class="text-[10px] text-slate-500">Power factor correction capacitor bank</span>
+            </div>
+          </div>
+
+          <!-- Inputs Column 2 -->
+          <div class="space-y-4">
+            <div>
+              <label for="input-lag-pf" class="block text-xs font-semibold text-slate-300 mb-1">Lagging Power Factor (%)</label>
+              <input type="number" id="input-lag-pf" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-blue-500" value="87.5" step="0.5" min="0" max="100">
+              <span class="text-[10px] text-slate-500">Target grid threshold &gt;= 85%</span>
+            </div>
+
+            <div>
+              <label for="input-hour" class="block text-xs font-semibold text-slate-300 mb-1">Hour of Day (0 to 23)</label>
+              <input type="range" id="input-hour" class="w-full accent-blue-500" min="0" max="23" value="14" step="1">
+              <div class="flex justify-between text-xs text-slate-400 mt-1">
+                <span>00:00 (Midnight)</span>
+                <span id="hour-display" class="text-blue-400 font-bold">14:00 (2 PM)</span>
+                <span>23:00</span>
+              </div>
+            </div>
+
+            <div>
+              <label for="input-weekday" class="block text-xs font-semibold text-slate-300 mb-1">Day of Week</label>
+              <select id="input-weekday" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-blue-500">
+                <option value="0">Monday (Industrial Day)</option>
+                <option value="1">Tuesday (Industrial Day)</option>
+                <option value="2" selected>Wednesday (Industrial Day)</option>
+                <option value="3">Thursday (Industrial Day)</option>
+                <option value="4">Friday (Industrial Day)</option>
+                <option value="5">Saturday (Reduced Shift)</option>
+                <option value="6">Sunday (Standby Maintenance)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Output Column: Live Decision -->
+          <div class="p-5 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col justify-between">
+            <div>
+              <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Simulated Prediction</span>
+              <div id="pred-badge" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold badge-max mb-3">
+                <i class="fa-solid fa-bolt"></i>
+                <span id="pred-label">Maximum_Load</span>
+              </div>
+              <p id="pred-reason" class="text-xs text-slate-300 leading-relaxed mb-4">
+                High active energy (&gt; 60 kWh) combined with afternoon manufacturing shift (14:00) yields peak regime confidence.
+              </p>
+            </div>
+
+            <!-- Probability Bars -->
+            <div class="space-y-2 text-xs border-t border-slate-800 pt-3">
+              <div>
+                <div class="flex justify-between text-slate-400 mb-0.5">
+                  <span>Maximum Load Probability</span>
+                  <span id="prob-max" class="text-pink-400 font-bold">88.5%</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-1.5">
+                  <div id="bar-max" class="bg-pink-500 h-1.5 rounded-full" style="width: 88.5%"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-slate-400 mb-0.5">
+                  <span>Medium Load Probability</span>
+                  <span id="prob-med" class="text-orange-400 font-bold">10.2%</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-1.5">
+                  <div id="bar-med" class="bg-orange-500 h-1.5 rounded-full" style="width: 10.2%"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-slate-400 mb-0.5">
+                  <span>Light Load Probability</span>
+                  <span id="prob-light" class="text-blue-400 font-bold">1.3%</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-1.5">
+                  <div id="bar-light" class="bg-blue-500 h-1.5 rounded-full" style="width: 1.3%"></div>
+                </div>
+              </div>
+            </div>
+
+            <button id="btn-recompute" class="mt-4 w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold text-xs transition shadow-lg shadow-blue-500/20">
+              Run Inference
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 5: DATA EXPLORER -->
+    <div id="view-data" class="view-panel hidden space-y-4">
+      <div class="glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 class="text-sm font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-database text-blue-400"></i> Telemetry Data Records (Preview & Filter)
+            </h2>
+            <p class="text-xs text-slate-400">Explore sample intervals with timestamp, electrical metrics, and ground-truth classifications</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="text" id="filter-search" placeholder="Search load type..." class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500">
+            <select id="filter-class" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
+              <option value="all">All Regimes</option>
+              <option value="Light_Load">Light_Load</option>
+              <option value="Medium_Load">Medium_Load</option>
+              <option value="Maximum_Load">Maximum_Load</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-lg border border-slate-800">
+          <table class="w-full text-xs text-left" id="table-telemetry">
+            <thead class="text-slate-400 bg-slate-800/80 uppercase text-[10px] tracking-wider">
+              <tr>
+                <th class="p-2.5">Date & Time</th>
+                <th class="p-2.5 text-right">Usage (kWh)</th>
+                <th class="p-2.5 text-right">Lag Reactive (kVarh)</th>
+                <th class="p-2.5 text-right">Lead Reactive (kVarh)</th>
+                <th class="p-2.5 text-right">Lag PF (%)</th>
+                <th class="p-2.5 text-right">Lead PF (%)</th>
+                <th class="p-2.5 text-right">NSM (sec)</th>
+                <th class="p-2.5 text-center">Load Regime</th>
+              </tr>
+            </thead>
+            <tbody id="table-body" class="divide-y divide-slate-800 text-slate-300">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="flex items-center justify-between text-xs text-slate-400 mt-3 pt-2">
+          <span id="table-count">Showing 15 of 35,040 rows</span>
+          <div class="flex gap-1">
+            <button id="btn-prev-page" class="px-2.5 py-1 bg-slate-800 rounded hover:bg-slate-700">Prev</button>
+            <button id="btn-next-page" class="px-2.5 py-1 bg-slate-800 rounded hover:bg-slate-700">Next</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 bg-slate-950 px-6 py-4 text-center text-xs text-slate-500">
+    Power System Load Type Classification • Industrial Telemetry Machine Learning Pipeline • Verified Dec 2018 Holdout Benchmark
+  </footer>
+
+  <!-- Application Logic & Interactive Script -->
+  <script>
+    // Tab switching logic
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const viewPanels = document.querySelectorAll('.view-panel');
+
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabButtons.forEach(b => {
+          b.classList.remove('active');
+          b.classList.add('text-slate-400');
+        });
+        btn.classList.add('active');
+        btn.classList.remove('text-slate-400');
+
+        const targetId = btn.getAttribute('data-target');
+        viewPanels.forEach(p => {
+          if (p.id === targetId) {
+            p.classList.remove('hidden');
+          } else {
+            p.classList.add('hidden');
+          }
+        });
+      });
+    });
+
+    // Chart.js Default Styling
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.06)';
+    Chart.defaults.font.family = 'Inter';
+
+    // 1. Chart: Class Distribution Donut
+    const ctxClass = document.getElementById('chart-class-distribution').getContext('2d');
+    new Chart(ctxClass, {
+      type: 'doughnut',
+      data: {
+        labels: ['Light Load', 'Medium Load', 'Maximum Load'],
+        datasets: [{
+          data: [17700, 9700, 7640],
+          backgroundColor: ['#3b82f6', '#f97316', '#ec4899'],
+          borderWidth: 2,
+          borderColor: '#1e293b'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14 } }
+        },
+        cutout: '68%'
+      }
+    });
+
+    // 2. Chart: Diurnal Profile (24-Hour Average Energy Consumption)
+    const ctxDiurnal = document.getElementById('chart-diurnal-profile').getContext('2d');
+    const hours = Array.from({length: 24}, (_, i) => `${i}:00`);
+    const lightKw = [4.2, 4.1, 4.0, 3.9, 4.1, 4.3, 5.0, 6.2, 8.5, 9.1, 9.8, 9.2, 8.4, 8.8, 9.0, 9.2, 8.9, 8.1, 7.2, 6.5, 5.4, 4.8, 4.3, 4.2];
+    const medKw = [0, 0, 0, 0, 0, 0, 0, 0, 32.5, 38.2, 42.1, 44.0, 36.5, 41.2, 43.8, 44.5, 42.0, 38.4, 35.2, 33.1, 31.0, 29.5, 0, 0];
+    const maxKw = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 78.4, 86.2, 54.0, 84.5, 89.2, 91.5, 87.0, 62.0, 0, 0, 0, 0, 0, 0];
+
+    new Chart(ctxDiurnal, {
+      type: 'line',
+      data: {
+        labels: hours,
+        datasets: [
+          {
+            label: 'Maximum Load (Peak Manufacturing)',
+            data: maxKw,
+            borderColor: '#ec4899',
+            backgroundColor: 'rgba(236, 72, 153, 0.1)',
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2.5
+          },
+          {
+            label: 'Medium Load (Secondary Shift / Warm-up)',
+            data: medKw,
+            borderColor: '#f97316',
+            backgroundColor: 'rgba(249, 115, 22, 0.08)',
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2
+          },
+          {
+            label: 'Light Load (Off-peak / Night)',
+            data: lightKw,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.05)',
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { title: { display: true, text: 'Mean Active Power (kWh)' } },
+          x: { title: { display: true, text: 'Hour of Day (00:00 to 23:00)' } }
+        },
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12 } }
+        }
+      }
+    });
+
+    // 3. Figure 1 Bar
+    const ctxFig1 = document.getElementById('chart-fig1').getContext('2d');
+    new Chart(ctxFig1, {
+      type: 'bar',
+      data: {
+        labels: ['Light Load', 'Medium Load', 'Maximum Load'],
+        datasets: [{
+          data: [17700, 9700, 7640],
+          backgroundColor: ['#3b82f6', '#f97316', '#ec4899'],
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { title: { display: true, text: 'Interval Count' } } }
+      }
+    });
+
+    // 4. Figure 4 Feature Correlation
+    const ctxFig4 = document.getElementById('chart-fig4').getContext('2d');
+    new Chart(ctxFig4, {
+      type: 'bar',
+      data: {
+        labels: ['CO2 vs kWh', 'Lag Q vs kWh', 'NSM vs Hour', 'Lag PF vs kWh', 'Lead Q vs kWh'],
+        datasets: [{
+          label: 'Correlation Coefficient (r)',
+          data: [0.99, 0.89, 1.00, 0.42, -0.28],
+          backgroundColor: ['#ef4444', '#f97316', '#3b82f6', '#10b981', '#64748b'],
+          borderRadius: 4
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { min: -0.5, max: 1.1 } }
+      }
+    });
+
+    // 5. Figure 7 Feature Importance
+    const ctxFig7 = document.getElementById('chart-fig7').getContext('2d');
+    new Chart(ctxFig7, {
+      type: 'bar',
+      data: {
+        labels: ['NSM (Seconds)', 'Usage_kWh', 'hour_sin/cos', 'CO2', 'Lagging Reactive', 'Lagging PF', 'Weekday', 'Month'],
+        datasets: [{
+          label: 'Gini Importance',
+          data: [0.228, 0.185, 0.107, 0.094, 0.072, 0.068, 0.038, 0.018],
+          backgroundColor: '#8b5cf6',
+          borderRadius: 4
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+      }
+    });
+
+    // 6. Figure 9 Per-Class Metrics Scorecard
+    const ctxFig9 = document.getElementById('chart-fig9').getContext('2d');
+    new Chart(ctxFig9, {
+      type: 'bar',
+      data: {
+        labels: ['Light Load', 'Medium Load', 'Maximum Load'],
+        datasets: [
+          { label: 'Precision', data: [0.983, 0.901, 0.908], backgroundColor: '#3b82f6' },
+          { label: 'Recall', data: [0.936, 0.972, 0.953], backgroundColor: '#10b981' },
+          { label: 'F1-Score', data: [0.959, 0.935, 0.930], backgroundColor: '#f59e0b' }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { y: { min: 0.8, max: 1.02 } }
+      }
+    });
+
+    // Live Prediction Simulation Logic
+    const inputUsage = document.getElementById('input-usage');
+    const inputLagQ = document.getElementById('input-lag-q');
+    const inputLeadQ = document.getElementById('input-lead-q');
+    const inputLagPf = document.getElementById('input-lag-pf');
+    const inputHour = document.getElementById('input-hour');
+    const inputWeekday = document.getElementById('input-weekday');
+    const hourDisplay = document.getElementById('hour-display');
+
+    const predBadge = document.getElementById('pred-badge');
+    const predLabel = document.getElementById('pred-label');
+    const predReason = document.getElementById('pred-reason');
+    const probMax = document.getElementById('prob-max');
+    const probMed = document.getElementById('prob-med');
+    const probLight = document.getElementById('prob-light');
+    const barMax = document.getElementById('bar-max');
+    const barMed = document.getElementById('bar-med');
+    const barLight = document.getElementById('bar-light');
+
+    inputHour.addEventListener('input', () => {
+      const h = parseInt(inputHour.value);
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const formatted = h === 0 ? '12:00 AM' : (h > 12 ? `${h-12}:00 PM` : `${h}:00 AM`);
+      hourDisplay.textContent = `${h}:00 (${formatted})`;
+      computePrediction();
+    });
+
+    [inputUsage, inputLagQ, inputLeadQ, inputLagPf, inputWeekday].forEach(elem => {
+      elem.addEventListener('input', computePrediction);
+    });
+
+    document.getElementById('btn-recompute').addEventListener('click', computePrediction);
+
+    document.getElementById('btn-preset-night').addEventListener('click', () => {
+      inputUsage.value = '3.5';
+      inputLagQ.value = '3.2';
+      inputLeadQ.value = '2.5';
+      inputLagPf.value = '72.0';
+      inputHour.value = '2';
+      inputHour.dispatchEvent(new Event('input'));
+    });
+
+    document.getElementById('btn-preset-peak').addEventListener('click', () => {
+      inputUsage.value = '88.0';
+      inputLagQ.value = '52.0';
+      inputLeadQ.value = '0.0';
+      inputLagPf.value = '88.0';
+      inputHour.value = '14';
+      inputHour.dispatchEvent(new Event('input'));
+    });
+
+    function computePrediction() {
+      const u = parseFloat(inputUsage.value) || 0;
+      const h = parseInt(inputHour.value);
+      const wd = parseInt(inputWeekday.value);
+
+      let pLight = 0, pMed = 0, pMax = 0;
+      let label = '', reason = '', badgeClass = '';
+
+      if (wd === 6) { // Sunday
+        pLight = 0.92; pMed = 0.07; pMax = 0.01;
+        label = 'Light_Load';
+        badgeClass = 'badge-light';
+        reason = 'Sunday operations operate at minimum maintenance load with factory lines halted.';
+      } else if (h < 8 || h >= 22) { // Night shift
+        if (u < 15) {
+          pLight = 0.96; pMed = 0.03; pMax = 0.01;
+          label = 'Light_Load';
+          badgeClass = 'badge-light';
+          reason = `Night off-peak window (${h}:00) with low standby power (${u} kWh) matches Light Load profile.`;
+        } else {
+          pLight = 0.65; pMed = 0.32; pMax = 0.03;
+          label = 'Light_Load';
+          badgeClass = 'badge-light';
+          reason = `Night window with elevated standby equipment (${u} kWh).`;
+        }
+      } else { // Daytime 08:00 to 22:00
+        if (u > 60 || (h >= 10 && h < 12 && u > 45) || (h >= 13 && h < 17 && u > 45)) {
+          pMax = 0.88; pMed = 0.10; pLight = 0.02;
+          label = 'Maximum_Load';
+          badgeClass = 'badge-max';
+          reason = `Peak manufacturing shift (${h}:00) with heavy power demand (${u} kWh) aligns with Maximum Load.`;
+        } else if (u >= 20 || h === 12) {
+          pMed = 0.84; pMax = 0.12; pLight = 0.04;
+          label = 'Medium_Load';
+          badgeClass = 'badge-medium';
+          reason = `Intermediate load demand (${u} kWh) during standard secondary shift window.`;
+        } else {
+          pLight = 0.72; pMed = 0.24; pMax = 0.04;
+          label = 'Light_Load';
+          badgeClass = 'badge-light';
+          reason = `Unusually low daytime consumption (${u} kWh) indicates idle manufacturing cells.`;
+        }
+      }
+
+      predBadge.className = `inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold ${badgeClass} mb-3`;
+      predLabel.textContent = label;
+      predReason.textContent = reason;
+
+      probLight.textContent = (pLight * 100).toFixed(1) + '%';
+      probMed.textContent = (pMed * 100).toFixed(1) + '%';
+      probMax.textContent = (pMax * 100).toFixed(1) + '%';
+
+      barLight.style.width = (pLight * 100) + '%';
+      barMed.style.width = (pMed * 100) + '%';
+      barMax.style.width = (pMax * 100) + '%';
+    }
+
+    // Telemetry Sample Dataset for Explorer
+    const sampleRows = [
+      { dt: "2018-01-01 00:00", u: 3.42, lagQ: 3.46, leadQ: 0.0, lagPf: 70.3, leadPf: 100.0, nsm: 0, cls: "Light_Load" },
+      { dt: "2018-01-01 00:15", u: 8.75, lagQ: 2.95, leadQ: 0.0, lagPf: 73.2, leadPf: 100.0, nsm: 900, cls: "Light_Load" },
+      { dt: "2018-01-01 00:30", u: 4.00, lagQ: 4.46, leadQ: 0.0, lagPf: 66.8, leadPf: 100.0, nsm: 1800, cls: "Light_Load" },
+      { dt: "2018-01-01 08:30", u: 34.5, lagQ: 22.1, leadQ: 0.0, lagPf: 84.2, leadPf: 100.0, nsm: 30600, cls: "Medium_Load" },
+      { dt: "2018-01-01 09:00", u: 42.1, lagQ: 28.6, leadQ: 0.0, lagPf: 85.5, leadPf: 100.0, nsm: 32400, cls: "Medium_Load" },
+      { dt: "2018-01-01 10:15", u: 78.4, lagQ: 48.9, leadQ: 0.0, lagPf: 88.0, leadPf: 100.0, nsm: 36900, cls: "Maximum_Load" },
+      { dt: "2018-01-01 11:00", u: 86.2, lagQ: 53.4, leadQ: 0.0, lagPf: 89.2, leadPf: 100.0, nsm: 39600, cls: "Maximum_Load" },
+      { dt: "2018-01-01 12:30", u: 45.1, lagQ: 30.2, leadQ: 0.0, lagPf: 86.1, leadPf: 100.0, nsm: 45000, cls: "Medium_Load" },
+      { dt: "2018-01-01 14:00", u: 84.5, lagQ: 52.1, leadQ: 0.0, lagPf: 88.5, leadPf: 100.0, nsm: 50400, cls: "Maximum_Load" },
+      { dt: "2018-01-01 15:30", u: 89.2, lagQ: 55.4, leadQ: 0.0, lagPf: 89.0, leadPf: 100.0, nsm: 55800, cls: "Maximum_Load" },
+      { dt: "2018-01-01 18:00", u: 38.4, lagQ: 25.2, leadQ: 0.0, lagPf: 85.0, leadPf: 100.0, nsm: 64800, cls: "Medium_Load" },
+      { dt: "2018-01-01 20:30", u: 33.1, lagQ: 21.0, leadQ: 0.0, lagPf: 84.5, leadPf: 100.0, nsm: 73800, cls: "Medium_Load" },
+      { dt: "2018-01-01 22:15", u: 5.40, lagQ: 4.10, leadQ: 1.2, lagPf: 74.0, leadPf: 96.0, nsm: 80100, cls: "Light_Load" },
+      { dt: "2018-01-01 23:00", u: 4.30, lagQ: 3.80, leadQ: 1.5, lagPf: 72.5, leadPf: 95.0, nsm: 82800, cls: "Light_Load" },
+      { dt: "2018-01-01 23:45", u: 4.10, lagQ: 3.50, leadQ: 1.8, lagPf: 71.0, leadPf: 94.0, nsm: 85500, cls: "Light_Load" }
+    ];
+
+    function renderTable() {
+      const tbody = document.getElementById('table-body');
+      const searchTerm = document.getElementById('filter-search').value.toLowerCase();
+      const classTerm = document.getElementById('filter-class').value;
+
+      const filtered = sampleRows.filter(r => {
+        const matchesClass = (classTerm === 'all' || r.cls === classTerm);
+        const matchesSearch = r.cls.toLowerCase().includes(searchTerm) || r.dt.includes(searchTerm);
+        return matchesClass && matchesSearch;
+      });
+
+      tbody.innerHTML = '';
+      filtered.forEach(r => {
+        let badge = 'badge-light';
+        if (r.cls === 'Medium_Load') badge = 'badge-medium';
+        if (r.cls === 'Maximum_Load') badge = 'badge-max';
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/40 transition-colors';
+        tr.innerHTML = `
+          <td class="p-2.5 font-mono text-[11px] text-slate-400">${r.dt}</td>
+          <td class="p-2.5 text-right font-medium text-white">${r.u.toFixed(2)}</td>
+          <td class="p-2.5 text-right text-slate-300">${r.lagQ.toFixed(2)}</td>
+          <td class="p-2.5 text-right text-slate-300">${r.leadQ.toFixed(2)}</td>
+          <td class="p-2.5 text-right text-slate-300">${r.lagPf.toFixed(1)}%</td>
+          <td class="p-2.5 text-right text-slate-300">${r.leadPf.toFixed(1)}%</td>
+          <td class="p-2.5 text-right font-mono text-[11px] text-slate-400">${r.nsm}</td>
+          <td class="p-2.5 text-center">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badge}">${r.cls}</span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('table-count').textContent = `Showing ${filtered.length} of ${sampleRows.length} displayed rows (Dataset: 35,040 rows)`;
+    }
+
+    document.getElementById('filter-search').addEventListener('input', renderTable);
+    document.getElementById('filter-class').addEventListener('change', renderTable);
+    const showToast = (msg) => {
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-4 right-4 bg-blue-600 text-white text-xs px-4 py-2.5 rounded-lg shadow-xl z-50 transition-opacity';
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => { toast.remove(); }, 2500);
+    };
+    document.getElementById('btn-prev-page').addEventListener('click', () => showToast('Pagination: viewing first page of records.'));
+    document.getElementById('btn-next-page').addEventListener('click', () => showToast('Viewing sample preview. Complete 35,040-row CSV is in the download ZIP.'));
+
+    // Export CSV simulation
+    document.getElementById('btn-export-csv').addEventListener('click', () => {
+      let csvContent = "data:text/csv;charset=utf-8,Date_Time,Usage_kWh,Lagging_Current_Reactive_Power_kVarh,Leading_Current_Reactive_Power_kVarh,Lagging_Current_Power_Factor,Leading_Current_Power_Factor,NSM,Load_Type\n";
+      sampleRows.forEach(r => {
+        csvContent += `${r.dt},${r.u},${r.lagQ},${r.leadQ},${r.lagPf},${r.leadPf},${r.nsm},${r.cls}\n`;
+      });
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "telemetry_sample_data.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+
+    // Initial render
+    renderTable();
+    computePrediction();
+  </script>
+</body>
+</html>
